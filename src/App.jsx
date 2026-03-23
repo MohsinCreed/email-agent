@@ -396,14 +396,14 @@ function MailView({ selectedThread, setSelectedThread }) {
   const tabFilter = (th) => {
     if (tab==="Inbound")  return th.messages.some(m=>m.direction==="Inbound");
     if (tab==="Outbound") return th.messages.some(m=>m.direction==="Outbound");
-    if (tab==="Drafts")   return isThreadDraft(th);
+    if (tab==="Review")   return isThreadDraft(th);
     return true;
   };
 
   const tabCounts = {
     Inbound:  THREADS.filter(t=>t.messages.some(m=>m.direction==="Inbound")).length,
     Outbound: THREADS.filter(t=>t.messages.some(m=>m.direction==="Outbound")).length,
-    Drafts:   THREADS.filter(t=>isThreadDraft(t)).length,
+    Review:   THREADS.filter(t=>isThreadDraft(t)).length,
   };
 
   const filtered = THREADS.filter(th => {
@@ -433,7 +433,7 @@ function MailView({ selectedThread, setSelectedThread }) {
 
         {/* Tabs */}
         <div style={{ display:"flex", borderBottom:`1px solid ${C.border}` }}>
-          {["Inbound","Outbound","Drafts"].map(t=>(
+          {["Inbound","Outbound","Review"].map(t=>(
             <button key={t} className="tb" onClick={()=>{setTab(t);setSelectedThread(null);}}
               style={{ color:tab===t?C.tertiary:C.muted, fontWeight:tab===t?700:400, borderBottom:tab===t?`2px solid ${C.tertiary}`:"2px solid transparent" }}>
               {t}
