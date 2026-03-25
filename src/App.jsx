@@ -447,6 +447,7 @@ function MailView({ selectedThread, setSelectedThread }) {
         {/* Search + toggle */}
         <div style={{ padding:"9px 11px", borderBottom:`1px solid ${C.border}`, display:"flex", gap:6 }}>
           <input value={fSearch} onChange={e=>setFSearch(e.target.value)} placeholder="Search…" className="fi"/>
+          <button className="bt">Sync</button>
           <button onClick={()=>setFiltersOpen(!filtersOpen)}
             style={{ background:filtersOpen||activeFC>0?"#FFF8E1":"#F6F8FA", border:`1.5px solid ${activeFC>0?C.secondary:C.border}`, borderRadius:6, padding:"6px 9px", cursor:"pointer", display:"flex", alignItems:"center", gap:4, fontSize:11, fontWeight:600, color:activeFC>0?C.onYellow:C.muted, whiteSpace:"nowrap", fontFamily:"inherit" }}>
             ⚙ {activeFC>0&&<span style={{ background:C.secondary, color:C.onYellow, borderRadius:10, padding:"0 4px", fontSize:10 }}>{activeFC}</span>}
