@@ -277,7 +277,7 @@ function Dashboard() {
   return (
     <div>
       {/* Date filter */}
-      <div style={{ background:"white", borderRadius:10, padding:"11px 16px", marginBottom:18, boxShadow:`0 2px 8px rgba(33,58,84,.06)`, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+      <div style={{ background:"white", borderRadius:10, padding:"8px 14px", marginBottom:12, boxShadow:`0 2px 8px rgba(33,58,84,.06)`, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
         <span style={{ fontSize:11.5, fontWeight:600, color:C.muted, marginRight:2 }}>Period:</span>
         {DATE_PRESETS.map(p=>(
           <button key={p} onClick={()=>setPreset(p)}
@@ -296,55 +296,119 @@ function Dashboard() {
       </div>
 
       {/* Stats */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:13, marginBottom:18 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10, marginBottom:12 }}>
         {STATS.map(s=>(
-          <div key={s.label} className="sc" style={{ background:"white", borderRadius:11, padding:"15px 17px", boxShadow:`0 2px 8px rgba(33,58,84,.07)`, borderTop:`3px solid ${s.up?C.tertiary:"#e5e7eb"}` }}>
-            <div style={{ fontSize:11, color:C.muted, fontWeight:500, marginBottom:4 }}>{s.label}</div>
-            <div style={{ fontSize:27, fontWeight:700, color:C.primary, lineHeight:1 }}>{s.value}</div>
-            <div style={{ fontSize:11, color:s.up?"#16a34a":"#dc2626", fontWeight:500, marginTop:4 }}>{s.up?"▲":"▼"} {s.change} vs prev period</div>
+          <div key={s.label} className="sc" style={{ background:"white", borderRadius:11, padding:"11px 14px", boxShadow:`0 2px 8px rgba(33,58,84,.07)`, borderTop:`3px solid ${s.up?C.tertiary:"#e5e7eb"}` }}>
+            <div style={{ fontSize:10.5, color:C.muted, fontWeight:500, marginBottom:3 }}>{s.label}</div>
+            <div style={{ fontSize:22, fontWeight:700, color:C.primary, lineHeight:1 }}>{s.value}</div>
+            <div style={{ fontSize:10.5, color:s.up?"#16a34a":"#dc2626", fontWeight:500, marginTop:3 }}>{s.up?"▲":"▼"} {s.change} vs prev period</div>
           </div>
         ))}
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
-        <div style={{ background:"white", borderRadius:11, padding:17, boxShadow:`0 2px 8px rgba(33,58,84,.06)` }}>
-          <h3 style={{ fontSize:13, fontWeight:700, color:C.primary, marginBottom:13 }}>Email Activity</h3>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+        <div style={{ background:"white", borderRadius:11, padding:"13px 16px", boxShadow:`0 2px 8px rgba(33,58,84,.06)` }}>
+          <h3 style={{ fontSize:12.5, fontWeight:700, color:C.primary, marginBottom:8 }}>Email Activity</h3>
           <TrendChart />
         </div>
+        <ClassificationInsights />
+      </div>
+    </div>
+  );
+}
 
-        <div style={{ background:"white", borderRadius:11, padding:17, boxShadow:`0 2px 8px rgba(33,58,84,.06)` }}>
-          <h3 style={{ fontSize:13, fontWeight:700, color:C.primary, marginBottom:13 }}>Classification Breakdown</h3>
-          {[["Job",38],["Quote",22],["PPM",17],["Invoice",12],["Combination",7],["Other",4]].map(([lbl,pct])=>(
-            <div key={lbl} style={{ marginBottom:9 }}>
-              <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
-                <span style={{ fontSize:11.5, fontWeight:500, color:C.neutral }}>{lbl}</span>
-                <span style={{ fontSize:11.5, fontWeight:600, color:C.primary }}>{pct}%</span>
-              </div>
-              <div style={{ background:"#EEF2F6", borderRadius:4, height:5, overflow:"hidden" }}>
-                <div style={{ background:CLS_COLORS[lbl]?.bg||C.primary, width:`${pct}%`, height:"100%", borderRadius:4 }}></div>
-              </div>
-            </div>
-          ))}
+/* ══════════════════════════════════════════════════════
+   CLASSIFICATION INSIGHTS
+══════════════════════════════════════════════════════ */
+const CLS_DATA = [
+  { label:"Job",         count:18, pct:38 },
+  { label:"Quote",       count:10, pct:22 },
+  { label:"PPM",         count:8,  pct:17 },
+  { label:"Invoice",     count:6,  pct:12 },
+  { label:"Combination", count:3,  pct:7  },
+  { label:"Other",       count:2,  pct:4  },
+];
+const TOTAL_EMAILS = CLS_DATA.reduce((s,d) => s + d.count, 0);
+
+function ClassificationInsights() {
+  const [selected, setSelected] = useState("Job");
+  const cls = CLS_DATA.find(d => d.label === selected);
+  const col = CLS_COLORS[selected] || { bg:"#374151", light:"#f3f4f6", text:"#374151" };
+  const relatedWfs = WORKFLOWS.filter(w => w.trigger === selected);
+
+  return (
+    <div style={{ background:"white", borderRadius:11, padding:"13px 15px", boxShadow:`0 2px 8px rgba(33,58,84,.06)`, display:"flex", flexDirection:"column" }}>
+      {/* Header */}
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:9 }}>
+        <h3 style={{ fontSize:12.5, fontWeight:700, color:C.primary }}>Classification Insights</h3>
+        <span style={{ fontSize:10.5, color:C.muted }}>{TOTAL_EMAILS} total</span>
+      </div>
+
+      {/* Category pills */}
+      <div style={{ display:"flex", gap:5, flexWrap:"wrap", marginBottom:11 }}>
+        {CLS_DATA.map(d => {
+          const c = CLS_COLORS[d.label] || { bg:"#374151", light:"#f3f4f6", text:"#374151" };
+          const active = selected === d.label;
+          return (
+            <button key={d.label} onClick={() => setSelected(d.label)}
+              style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 10px", borderRadius:20, cursor:"pointer", fontFamily:"inherit", transition:"all .18s",
+                border:`1.5px solid ${active ? c.bg : C.border}`,
+                background: active ? c.bg : "white",
+                color: active ? "white" : C.neutral,
+                fontWeight: active ? 700 : 400, fontSize:11 }}>
+              {d.label}
+              <span style={{ background: active ? "rgba(255,255,255,.3)" : C.bg, color: active ? "white" : C.muted,
+                fontSize:9.5, fontWeight:700, padding:"0 5px", borderRadius:10 }}>{d.pct}%</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Stat strip */}
+      <div style={{ background:col.light, borderRadius:9, padding:"9px 12px", marginBottom:10, display:"flex", alignItems:"center", gap:16 }}>
+        <div>
+          <div style={{ fontSize:9.5, color:col.text, fontWeight:600, opacity:.75 }}>EMAILS</div>
+          <div style={{ fontSize:22, fontWeight:700, color:col.text, lineHeight:1.1 }}>{cls.count}</div>
+        </div>
+        <div style={{ flex:1 }}>
+          <div style={{ fontSize:9.5, color:col.text, fontWeight:600, opacity:.75, marginBottom:4 }}>SHARE</div>
+          <div style={{ background:"rgba(255,255,255,.5)", borderRadius:4, height:5, overflow:"hidden" }}>
+            <div style={{ background:col.bg, width:`${cls.pct}%`, height:"100%", borderRadius:4, transition:"width .4s" }}></div>
+          </div>
+          <div style={{ fontSize:10.5, fontWeight:700, color:col.text, marginTop:2 }}>{cls.pct}% of {TOTAL_EMAILS}</div>
+        </div>
+        <div style={{ textAlign:"right" }}>
+          <div style={{ fontSize:9.5, color:col.text, fontWeight:600, opacity:.75 }}>WORKFLOWS</div>
+          <div style={{ fontSize:22, fontWeight:700, color:col.text, lineHeight:1.1 }}>{relatedWfs.length}</div>
         </div>
       </div>
 
-      <div style={{ background:"white", borderRadius:11, padding:17, marginTop:16, boxShadow:`0 2px 8px rgba(33,58,84,.06)` }}>
-        <h3 style={{ fontSize:13, fontWeight:700, color:C.primary, marginBottom:11 }}>Active Workflows — Period Activity</h3>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:9 }}>
-          {WORKFLOWS.filter(w=>w.active).map(wf=>(
-            <div key={wf.id} style={{ background:C.bg, borderRadius:8, padding:"10px 12px", border:`1px solid ${C.border}` }}>
-              <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:2 }}>
-                <span style={{ fontSize:11.5, fontWeight:700, color:C.primary }}>{wf.name}</span>
-                <DirBadge d={wf.direction} small/>
+      {/* Workflow list */}
+      <div style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:.5, marginBottom:6 }}>
+        Workflows — {selected}
+      </div>
+      <div style={{ display:"flex", flexDirection:"column", gap:6, overflowY:"auto" }}>
+        {relatedWfs.length === 0
+          ? <div style={{ fontSize:11.5, color:C.muted }}>No workflows for this category.</div>
+          : relatedWfs.map(wf => (
+            <div key={wf.id} style={{ background:C.bg, borderRadius:8, padding:"8px 11px", border:`1px solid ${C.border}`, borderLeft:`3px solid ${wf.active ? col.bg : C.border}`, display:"flex", alignItems:"center", gap:10 }}>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:5, marginBottom:3 }}>
+                  <span style={{ fontSize:11.5, fontWeight:700, color:C.primary }}>{wf.name}</span>
+                  <span style={{ width:6, height:6, borderRadius:"50%", background: wf.active ? "#22c55e" : "#cbd5e1", flexShrink:0 }}></span>
+                </div>
+                <div style={{ display:"flex", gap:4 }}>
+                  <DirBadge d={wf.direction} small />
+                  {wf.requireConfirm && <span style={{ background:"#FFF8E1", color:"#92400e", fontSize:9, fontWeight:700, padding:"1px 6px", borderRadius:5 }}>Human Loop</span>}
+                </div>
               </div>
-              <div style={{ fontSize:10.5, color:C.muted, marginBottom:5 }}>{wf.trigger}</div>
-              <div style={{ display:"flex", justifyContent:"space-between" }}>
-                <span style={{ fontSize:11.5, fontWeight:700, color:C.tertiary }}>{wf.runs} runs</span>
-                <span style={{ fontSize:10, color:C.muted }}>Last: {wf.lastRun}</span>
+              <div style={{ textAlign:"right", flexShrink:0 }}>
+                <div style={{ fontSize:11, fontWeight:700, color:C.tertiary }}>{wf.runs} runs</div>
+                <div style={{ fontSize:9.5, color:C.muted }}>Last: {wf.lastRun}</div>
               </div>
             </div>
-          ))}
-        </div>
+          ))
+        }
       </div>
     </div>
   );
@@ -374,7 +438,7 @@ function TrendChart() {
   const [active, setActive] = useState(CHART_LINES.map(l=>l.key));
   const [tooltip, setTooltip] = useState(null);
 
-  const W = 420, H = 155, PL = 36, PR = 10, PT = 8, PB = 22;
+  const W = 500, H = 160, PL = 30, PR = 10, PT = 6, PB = 18;
   const cW = W - PL - PR, cH = H - PT - PB;
 
   const visibleLines = CHART_LINES.filter(l => active.includes(l.key));
@@ -395,18 +459,18 @@ function TrendChart() {
   return (
     <div>
       {/* Legend */}
-      <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom:10 }}>
+      <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginBottom:6 }}>
         {CHART_LINES.map(l => (
           <button key={l.key} onClick={() => toggle(l.key)}
-            style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"none", cursor:"pointer", padding:0, fontFamily:"inherit", opacity: active.includes(l.key) ? 1 : 0.35 }}>
-            <span style={{ width:20, height:3, background:l.color, borderRadius:2, display:"inline-block" }}></span>
-            <span style={{ fontSize:10.5, color:C.neutral, fontWeight:500 }}>{l.label}</span>
+            style={{ display:"flex", alignItems:"center", gap:4, background:"none", border:"none", cursor:"pointer", padding:0, fontFamily:"inherit", opacity: active.includes(l.key) ? 1 : 0.35 }}>
+            <span style={{ width:16, height:2.5, background:l.color, borderRadius:2, display:"inline-block" }}></span>
+            <span style={{ fontSize:10, color:C.neutral, fontWeight:500 }}>{l.label}</span>
           </button>
         ))}
       </div>
 
       {/* SVG chart */}
-      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow:"visible" }}
+      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow:"visible", display:"block" }}
         onMouseLeave={() => setTooltip(null)}>
 
         {/* Y grid + labels */}
