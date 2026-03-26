@@ -276,6 +276,17 @@ function Dashboard() {
   const [cTo,setCTo]=useState("");
   return (
     <div>
+      {/* Stats */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:13, marginBottom:18 }}>
+        {STATS.map(s=>(
+          <div key={s.label} className="sc" style={{ background:"white", borderRadius:11, padding:"15px 17px", boxShadow:`0 2px 8px rgba(33,58,84,.07)`, borderTop:`3px solid ${s.up?C.tertiary:"#e5e7eb"}` }}>
+            <div style={{ fontSize:11, color:C.muted, fontWeight:500, marginBottom:4 }}>{s.label}</div>
+            <div style={{ fontSize:27, fontWeight:700, color:C.primary, lineHeight:1 }}>{s.value}</div>
+            <div style={{ fontSize:11, color:s.up?"#16a34a":"#dc2626", fontWeight:500, marginTop:4 }}>{s.up?"▲":"▼"} {s.change} vs prev period</div>
+          </div>
+        ))}
+      </div>
+
       {/* Date filter */}
       <div style={{ background:"white", borderRadius:10, padding:"11px 16px", marginBottom:18, boxShadow:`0 2px 8px rgba(33,58,84,.06)`, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
         <span style={{ fontSize:11.5, fontWeight:600, color:C.muted, marginRight:2 }}>Period:</span>
@@ -293,17 +304,6 @@ function Dashboard() {
             <button className="bp">Apply</button>
           </div>
         )}
-      </div>
-
-      {/* Stats */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:13, marginBottom:18 }}>
-        {STATS.map(s=>(
-          <div key={s.label} className="sc" style={{ background:"white", borderRadius:11, padding:"15px 17px", boxShadow:`0 2px 8px rgba(33,58,84,.07)`, borderTop:`3px solid ${s.up?C.tertiary:"#e5e7eb"}` }}>
-            <div style={{ fontSize:11, color:C.muted, fontWeight:500, marginBottom:4 }}>{s.label}</div>
-            <div style={{ fontSize:27, fontWeight:700, color:C.primary, lineHeight:1 }}>{s.value}</div>
-            <div style={{ fontSize:11, color:s.up?"#16a34a":"#dc2626", fontWeight:500, marginTop:4 }}>{s.up?"▲":"▼"} {s.change} vs prev period</div>
-          </div>
-        ))}
       </div>
 
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
