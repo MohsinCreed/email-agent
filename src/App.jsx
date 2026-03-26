@@ -155,7 +155,8 @@ const THREADS = [
 const STATS = [
   { label:"Emails Today",    value:"47", change:"+12%", up:true  },
   { label:"Pending Review",  value:"9",  change:"-3",   up:false },
-  { label:"Processed by AI", value:"38", change:"81%",  up:true  },
+  { label:"Processed by AI - Human In Loop", value:"36", change:"63%",  up:true  },
+  { label:"Processed by AI", value:"6", change:"11%",  up:true  },
 ];
 const DATE_PRESETS = ["Today","Yesterday","Last 7 days","Last 30 days","Custom"];
 const FONTS = ["DM Sans","Georgia","Helvetica Neue","Trebuchet MS","Garamond","Courier New"];
@@ -275,17 +276,6 @@ function Dashboard() {
   const [cTo,setCTo]=useState("");
   return (
     <div>
-      {/* Stats */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:13, marginBottom:18 }}>
-        {STATS.map(s=>(
-          <div key={s.label} className="sc" style={{ background:"white", borderRadius:11, padding:"15px 17px", boxShadow:`0 2px 8px rgba(33,58,84,.07)`, borderTop:`3px solid ${s.up?C.tertiary:"#e5e7eb"}` }}>
-            <div style={{ fontSize:11, color:C.muted, fontWeight:500, marginBottom:4 }}>{s.label}</div>
-            <div style={{ fontSize:27, fontWeight:700, color:C.primary, lineHeight:1 }}>{s.value}</div>
-            <div style={{ fontSize:11, color:s.up?"#16a34a":"#dc2626", fontWeight:500, marginTop:4 }}>{s.up?"▲":"▼"} {s.change} vs prev period</div>
-          </div>
-        ))}
-      </div>
-
       {/* Date filter */}
       <div style={{ background:"white", borderRadius:10, padding:"11px 16px", marginBottom:18, boxShadow:`0 2px 8px rgba(33,58,84,.06)`, display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
         <span style={{ fontSize:11.5, fontWeight:600, color:C.muted, marginRight:2 }}>Period:</span>
@@ -303,6 +293,17 @@ function Dashboard() {
             <button className="bp">Apply</button>
           </div>
         )}
+      </div>
+
+      {/* Stats */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:13, marginBottom:18 }}>
+        {STATS.map(s=>(
+          <div key={s.label} className="sc" style={{ background:"white", borderRadius:11, padding:"15px 17px", boxShadow:`0 2px 8px rgba(33,58,84,.07)`, borderTop:`3px solid ${s.up?C.tertiary:"#e5e7eb"}` }}>
+            <div style={{ fontSize:11, color:C.muted, fontWeight:500, marginBottom:4 }}>{s.label}</div>
+            <div style={{ fontSize:27, fontWeight:700, color:C.primary, lineHeight:1 }}>{s.value}</div>
+            <div style={{ fontSize:11, color:s.up?"#16a34a":"#dc2626", fontWeight:500, marginTop:4 }}>{s.up?"▲":"▼"} {s.change} vs prev period</div>
+          </div>
+        ))}
       </div>
 
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
@@ -353,19 +354,20 @@ function Dashboard() {
    TREND CHART
 ══════════════════════════════════════════════════════ */
 const CHART_DATA = [
-  { date:"Mar 14", emails:31, auto:24, pending:7  },
-  { date:"Mar 15", emails:38, auto:29, pending:9  },
-  { date:"Mar 16", emails:27, auto:21, pending:6  },
-  { date:"Mar 17", emails:42, auto:35, pending:7  },
-  { date:"Mar 18", emails:35, auto:28, pending:7  },
-  { date:"Mar 19", emails:29, auto:23, pending:6  },
-  { date:"Mar 20", emails:47, auto:38, pending:9  },
+  { date:"Mar 14", emails:31, auto:6,  humanLoop:24, pending:7  },
+  { date:"Mar 15", emails:38, auto:7,  humanLoop:29, pending:9  },
+  { date:"Mar 16", emails:27, auto:5,  humanLoop:20, pending:6  },
+  { date:"Mar 17", emails:42, auto:8,  humanLoop:34, pending:7  },
+  { date:"Mar 18", emails:35, auto:6,  humanLoop:27, pending:7  },
+  { date:"Mar 19", emails:29, auto:5,  humanLoop:22, pending:6  },
+  { date:"Mar 20", emails:47, auto:6,  humanLoop:36, pending:9  },
 ];
 
 const CHART_LINES = [
-  { key:"emails",  label:"Emails Today",   color:"#0056B3" },
-  { key:"pending", label:"Pending Review", color:"#dc2626" },
-  { key:"auto",    label:"Processed by AI", color:"#16a34a" },
+  { key:"emails",    label:"Emails Today",                    color:"#0056B3" },
+  { key:"pending",   label:"Pending Review",                  color:"#dc2626" },
+  { key:"humanLoop", label:"Processed by AI - Human In Loop", color:"#f59e0b" },
+  { key:"auto",      label:"Processed by AI",                 color:"#16a34a" },
 ];
 
 function TrendChart() {
