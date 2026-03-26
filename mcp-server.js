@@ -177,23 +177,6 @@ class ChromeDevToolsServer {
     return { content: [{ type: 'text', text: 'Browser not running' }] };
   }
 
-  setupHandlers() {
-    this.server.setRequestHandler('initialize', async (request) => {
-      return {
-        protocolVersion: request.params.protocolVersion,
-        capabilities: {
-          tools: {
-            listChanged: false,
-          },
-        },
-        serverInfo: {
-          name: 'chrome-devtools-server',
-          version: '1.0.0',
-        },
-      };
-    });
-  }
-
   async run() {
     const transport = new StdioServerTransport();
     await this.server.connect(transport);
