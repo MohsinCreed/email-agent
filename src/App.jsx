@@ -797,7 +797,61 @@ function ThreadDetail({ thread, editingId, setEditingId, editBodies, setEditBodi
           return (
             <React.Fragment key={msg.id}>
               {showDraftRecord && (
-                <DraftRecordBlock record={thread.draftRecord} sentIds={sentIds} threadMsgs={thread.messages} onApprove={()=>setRecordApproved(true)} approved={recordApproved} />
+                <DraftRecordBlock
+                  record={thread.draftRecord}
+                  sentIds={sentIds}
+                  threadMsgs={thread.messages}
+                  onApprove={()=>setRecordApproved(true)}
+                  approved={recordApproved}
+                  onFieldsSaved={(updatedFields) => {
+                    const outMsg = thread.messages.find(m => m.direction==="Outbound" && m.status==="draft");
+                    if (!outMsg) return;
+                    const g = (label) => updatedFields.find(f => f.label===label)?.value || "—";
+                    const customerName = g("Customer").split("—")[0].trim();
+                    const firstName = customerName.split(" ")[0];
+                    let newBody = "";
+                    if (thread.draftRecord.type === "Job") {
+                      newBody =
+`Dear ${firstName},
+
+Thank you for contacting us. We have logged your request under job reference DRAFT.
+
+Customer: ${g("Customer")}
+Site: ${g("Site")}
+Job Type: ${g("Job Type")}
+Description: ${g("Job Description")}
+Priority: ${g("Priority")}
+Category: ${g("Job Category")}
+Trade: ${g("Job Primary Trade")}
+
+An engineer will be assigned and you will receive a confirmed visit time shortly. Please ensure safe access to the site is available.
+
+Kind regards,
+FSM Operations Team`;
+                    } else if (thread.draftRecord.type === "Quote") {
+                      newBody =
+`Dear ${firstName},
+
+Thank you for your quote request. We have reviewed your requirements and prepared the following draft quote.
+
+Customer: ${g("Customer")}
+Site: ${g("Site")}
+Title: ${g("Title")}
+Description: ${g("Description")}
+Job Type: ${g("Job Type")}
+Trade: ${g("Quote Trade")}
+Category: ${g("Job Category")}
+Priority: ${g("Priority")}
+Quote Reference: DRAFT
+
+This quote is subject to a site survey, which we will arrange shortly.
+
+Kind regards,
+FSM Operations Team`;
+                    }
+                    if (newBody) setEditBodies(p => ({ ...p, [outMsg.id]: newBody }));
+                  }}
+                />
               )}
               <div style={{ display:"flex", flexDirection:"column", alignItems:isOut?"flex-end":"flex-start" }}>              {/* Avatar + sender */}
               <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:5, flexDirection:isOut?"row-reverse":"row" }}>
@@ -1013,6 +1067,32 @@ function WorkflowsView({ wfStates, toggleWf, toggleConfirm, toggleAck }) {
 /* ══════════════════════════════════════════════════════
    PERSONALIZATION
 ══════════════════════════════════════════════════════ */
+const DEFAULT_ACK_TEMPLATES = WORKFLOWS.reduce((acc, wf) => {
+  const triggerLine = {
+    Job:         "We have received your job request and our team is reviewing the details.",
+    Quote:       "We have received your quote request and will prepare a detailed proposal shortly.",
+    PPM:         "We have received your planned maintenance schedule and are loading it into our system.",
+    Invoice:     "We have received your invoice query and our accounts team will review it promptly.",
+    Combination: "We have received your message and are handling each request separately.",
+    Other:       "We have received your email and a member of our team will review it shortly.",
+  };
+  acc[wf.id] =
+`Dear {{customer_name}},
+
+Thank you for contacting us regarding your {{workflow_name}} request.
+
+${triggerLine[wf.trigger] || "We have received your message and will be in touch shortly."}
+
+Reference: {{reference_number}}
+Received: {{received_date}}
+
+We will be in touch shortly.
+
+Kind regards,
+FSM Operations Team`;
+  return acc;
+}, {});
+
 function PersonalizationView() {
   const [tone,           setTone]           = useState("professional");
   const [signature,      setSignature]      = useState("Best regards,\nFSM Email AI Agent");
@@ -1021,6 +1101,17 @@ function PersonalizationView() {
   const [fs,             setFs]             = useState("14");
   const [lh,             setLh]             = useState("1.6");
   const [ew,             setEw]             = useState("640");
+  const [ackTemplates,   setAckTemplates]   = useState(DEFAULT_ACK_TEMPLATES);
+  const [ackWfId,        setAckWfId]        = useState(WORKFLOWS[0].id);
+  const [ackSaved,       setAckSaved]       = useState({});
+
+  const selectedWf = WORKFLOWS.find(w => w.id === ackWfId);
+  const ackBody    = ackTemplates[ackWfId] ?? "";
+
+  const handleAckSave = () => {
+    setAckSaved(p => ({ ...p, [ackWfId]: true }));
+    setTimeout(() => setAckSaved(p => ({ ...p, [ackWfId]: false })), 2000);
+  };
 
   const previewStyle = {
     fontFamily: font, fontSize:`${fs}px`, lineHeight:lh, color:C.neutral,
@@ -1028,15 +1119,16 @@ function PersonalizationView() {
   };
 
   return (
-    <div style={{ maxWidth:860 }}>
+    <div style={{ maxWidth:1100 }}>
       <div style={{ marginBottom:16 }}>
         <h2 style={{ fontSize:15, fontWeight:700, color:C.primary }}>Personalization & Settings</h2>
         <p style={{ fontSize:12, color:C.muted, marginTop:2 }}>Configure how the AI agent behaves and communicates</p>
       </div>
 
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, alignItems:"start" }}>
-        {/* LEFT */}
-        <div style={{ display:"grid", gap:13 }}>
+      <div style={{ display:"grid", gap:14 }}>
+
+        {/* ROW 1 — Stationery + AI Behaviour + Notifications */}
+        <div style={{ display:"grid", gridTemplateColumns:"1.2fr 1fr 1fr", gap:14, alignItems:"start" }}>
 
           {/* Stationery */}
           <div style={{ background:"white", borderRadius:11, padding:19, boxShadow:`0 2px 8px rgba(33,58,84,.06)` }}>
@@ -1072,25 +1164,111 @@ function PersonalizationView() {
           {/* AI Behaviour */}
           <div style={{ background:"white", borderRadius:11, padding:19, boxShadow:`0 2px 8px rgba(33,58,84,.06)` }}>
             <h3 style={{ fontSize:13, fontWeight:700, color:C.primary, marginBottom:13 }}>AI Behaviour</h3>
-            <div style={{ marginBottom:12 }}>
-              <label style={{ fontSize:11, fontWeight:700, color:C.muted, display:"block", marginBottom:6, textTransform:"uppercase" }}>Response Tone</label>
-              <div style={{ display:"flex", gap:7 }}>
-                {["professional","friendly","concise"].map(t=>(
-                  <button key={t} onClick={()=>setTone(t)}
-                    style={{ padding:"6px 14px", border:`2px solid ${tone===t?C.tertiary:C.border}`, background:tone===t?"#EEF6FF":"white", color:tone===t?C.tertiary:C.neutral, borderRadius:6, fontSize:12, fontWeight:tone===t?600:400, cursor:"pointer", textTransform:"capitalize", transition:"all .2s", fontFamily:"inherit" }}>
-                    {t}
-                  </button>
-                ))}
+            <label style={{ fontSize:11, fontWeight:700, color:C.muted, display:"block", marginBottom:8, textTransform:"uppercase" }}>Response Tone</label>
+            <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
+              {["professional","friendly","concise"].map(t=>(
+                <button key={t} onClick={()=>setTone(t)}
+                  style={{ padding:"9px 14px", border:`2px solid ${tone===t?C.tertiary:C.border}`, background:tone===t?"#EEF6FF":"white", color:tone===t?C.tertiary:C.neutral, borderRadius:8, fontSize:12, fontWeight:tone===t?600:400, cursor:"pointer", textTransform:"capitalize", transition:"all .2s", fontFamily:"inherit", textAlign:"left", display:"flex", alignItems:"center", gap:8 }}>
+                  <span style={{ width:8, height:8, borderRadius:"50%", background:tone===t?C.tertiary:C.border, flexShrink:0, transition:"background .2s" }}></span>
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Notifications */}
+          <div style={{ background:"white", borderRadius:11, padding:19, boxShadow:`0 2px 8px rgba(33,58,84,.06)` }}>
+            <h3 style={{ fontSize:13, fontWeight:700, color:C.primary, marginBottom:11 }}>Notifications</h3>
+            {[
+              ["Email classified",      "Notify when an email is classified", true],
+              ["Workflow completed",    "Notify when a workflow finishes",    true],
+              ["Draft created",         "Notify when a draft needs approval", true],
+              ["Classification failed", "Notify when AI cannot classify",     false],
+            ].map(([lbl,desc,def])=>(
+              <div key={lbl} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 0", borderTop:`1px solid ${C.border}` }}>
+                <div>
+                  <div style={{ fontSize:12, fontWeight:600, color:C.neutral }}>{lbl}</div>
+                  <div style={{ fontSize:10.5, color:C.muted }}>{desc}</div>
+                </div>
+                <label className="ts"><input type="checkbox" defaultChecked={def}/><span className="sl"></span></label>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ROW 2 — Acknowledgement Templates (full width) */}
+        <div style={{ background:"white", borderRadius:11, padding:19, boxShadow:`0 2px 8px rgba(33,58,84,.06)` }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+            <h3 style={{ fontSize:13, fontWeight:700, color:C.primary }}>Acknowledgement Templates</h3>
+            <span style={{ background:"#ede9fe", color:"#6d28d9", fontSize:9.5, fontWeight:700, padding:"2px 8px", borderRadius:10 }}>Per Workflow</span>
+          </div>
+          <p style={{ fontSize:11, color:C.muted, marginBottom:14 }}>
+            Customise the auto-acknowledgement message sent to customers when each workflow is triggered.
+          </p>
+
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1.6fr", gap:18, alignItems:"start" }}>
+            {/* Left: selector + context */}
+            <div>
+              <label style={{ fontSize:11, fontWeight:700, color:C.muted, display:"block", marginBottom:5, textTransform:"uppercase" }}>Select Workflow</label>
+              <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                {WORKFLOWS.map(wf => {
+                  const col = CLS_COLORS[wf.trigger] || { bg:"#374151", light:"#f3f4f6", text:"#374151" };
+                  const active = ackWfId === wf.id;
+                  return (
+                    <button key={wf.id} onClick={() => setAckWfId(wf.id)}
+                      style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 11px", borderRadius:8, border:`1.5px solid ${active ? col.bg : C.border}`, background:active ? col.light : "white", cursor:"pointer", fontFamily:"inherit", transition:"all .18s", textAlign:"left" }}>
+                      <span style={{ width:7, height:7, borderRadius:"50%", background:active ? col.bg : C.border, flexShrink:0 }}></span>
+                      <span style={{ flex:1, fontSize:11.5, fontWeight:active?700:400, color:active ? col.text : C.neutral }}>{wf.name}</span>
+                      <DirBadge d={wf.direction} small/>
+                    </button>
+                  );
+                })}
               </div>
             </div>
-            {/* (AI Behaviour toggles removed per request) */}
-            {/* Empty block retained by design */}
+
+            {/* Right: editor */}
+            <div>
+              {selectedWf && (
+                <div style={{ display:"flex", gap:6, alignItems:"center", marginBottom:10, background:C.bg, borderRadius:8, padding:"8px 11px", border:`1px solid ${C.border}` }}>
+                  <ClassBadge c={selectedWf.trigger}/>
+                  <DirBadge d={selectedWf.direction} small/>
+                  <span style={{ fontSize:11, color:C.muted, marginLeft:2 }}>{selectedWf.description.slice(0,90)}…</span>
+                </div>
+              )}
+              <textarea
+                value={ackBody}
+                onChange={e => setAckTemplates(p => ({ ...p, [ackWfId]: e.target.value }))}
+                rows={11}
+                style={{ width:"100%", border:`1px solid ${C.border}`, borderRadius:8, padding:"9px 11px", fontSize:12, color:C.neutral, resize:"vertical", outline:"none", fontFamily:"inherit" }}
+              />
+              <div style={{ marginTop:7, marginBottom:11, fontSize:11, color:C.muted, lineHeight:1.9 }}>
+                Dynamic placeholders:{" "}
+                {[
+                  ["{{customer_name}}","Customer's name"],
+                  ["{{workflow_name}}","Triggered workflow"],
+                  ["{{reference_number}}","Auto-generated ref"],
+                  ["{{received_date}}","Date email received"],
+                ].map(([ph, tip]) => (
+                  <span key={ph} title={tip} style={{ display:"inline-block", background:"#f3f4f6", color:C.tertiary, fontFamily:"monospace", fontSize:10.5, padding:"1px 6px", borderRadius:4, marginRight:5, cursor:"default", border:`1px solid ${C.border}` }}>
+                    {ph}
+                  </span>
+                ))}
+              </div>
+              <div style={{ display:"flex", justifyContent:"flex-end", gap:8 }}>
+                <button className="bg" onClick={() => setAckTemplates(p => ({ ...p, [ackWfId]: DEFAULT_ACK_TEMPLATES[ackWfId] }))}>↺ Reset</button>
+                <button className="bt" onClick={handleAckSave}>{ackSaved[ackWfId] ? "✓ Saved" : "Save Template"}</button>
+              </div>
+            </div>
           </div>
+        </div>
+
+        {/* ROW 3 — Custom Template + Signature + Live Preview */}
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1.2fr", gap:14, alignItems:"start" }}>
 
           {/* Custom Email Template */}
           <div style={{ background:"white", borderRadius:11, padding:19, boxShadow:`0 2px 8px rgba(33,58,84,.06)` }}>
             <h3 style={{ fontSize:13, fontWeight:700, color:C.primary, marginBottom:13 }}>Custom Email Template</h3>
-            <textarea value={customTemplate} onChange={e=>setCustomTemplate(e.target.value)} rows={8}
+            <textarea value={customTemplate} onChange={e=>setCustomTemplate(e.target.value)} rows={9}
               style={{ width:"100%", border:`1px solid ${C.border}`, borderRadius:8, padding:"9px 11px", fontSize:12, color:C.neutral, resize:"vertical", outline:"none", fontFamily:"inherit" }}/>
             <div style={{ marginTop:8, fontSize:11, color:C.muted }}>
               Use placeholders: <code>{'{{name}}'}</code>, <code>{'{{body}}'}</code>, <code>{'{{sender}}'}</code>
@@ -1100,33 +1278,13 @@ function PersonalizationView() {
           {/* Signature */}
           <div style={{ background:"white", borderRadius:11, padding:19, boxShadow:`0 2px 8px rgba(33,58,84,.06)` }}>
             <h3 style={{ fontSize:13, fontWeight:700, color:C.primary, marginBottom:9 }}>Email Signature</h3>
-            <textarea value={signature} onChange={e=>setSignature(e.target.value)} rows={4}
+            <p style={{ fontSize:11, color:C.muted, marginBottom:11 }}>Appended to every outbound email sent by the AI agent.</p>
+            <textarea value={signature} onChange={e=>setSignature(e.target.value)} rows={9}
               style={{ width:"100%", border:`1px solid ${C.border}`, borderRadius:8, padding:"9px 11px", fontSize:13, color:C.neutral, resize:"vertical", outline:"none", fontFamily:"inherit" }}/>
           </div>
 
-          {/* Notifications */}
+          {/* Live Preview */}
           <div style={{ background:"white", borderRadius:11, padding:19, boxShadow:`0 2px 8px rgba(33,58,84,.06)` }}>
-            <h3 style={{ fontSize:13, fontWeight:700, color:C.primary, marginBottom:11 }}>Notifications</h3>
-            {[
-              ["Email classified",      "Notify when an email is classified by the AI", true],
-              ["Workflow completed",    "Notify when a workflow finishes running",       true],
-              ["Draft created",         "Notify when a draft is created for approval",  true],
-              ["Classification failed", "Notify when AI cannot classify an email",      false],
-            ].map(([lbl,desc,def])=>(
-              <div key={lbl} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 0", borderTop:`1px solid ${C.border}` }}>
-                <div>
-                  <div style={{ fontSize:12, fontWeight:600, color:C.neutral }}>{lbl}</div>
-                  <div style={{ fontSize:11, color:C.muted }}>{desc}</div>
-                </div>
-                <label className="ts"><input type="checkbox" defaultChecked={def}/><span className="sl"></span></label>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* RIGHT — live preview */}
-        <div style={{ position:"sticky", top:0 }}>
-          <div style={{ background:"white", borderRadius:11, padding:19, boxShadow:`0 2px 8px rgba(33,58,84,.06)`, marginBottom:13 }}>
             <h3 style={{ fontSize:13, fontWeight:700, color:C.primary, marginBottom:2 }}>Live Preview</h3>
             <p style={{ fontSize:11, color:C.muted, marginBottom:14 }}>Sample outbound email with your stationery applied</p>
             <div style={{ background:C.bg, borderRadius:8, padding:12, overflow:"auto" }}>
@@ -1141,11 +1299,14 @@ function PersonalizationView() {
               </div>
             </div>
           </div>
-          <div style={{ display:"flex", justifyContent:"flex-end", gap:9 }}>
-            <button className="bg">Discard</button>
-            <button className="bp">Save Settings</button>
-          </div>
         </div>
+
+        {/* Save bar */}
+        <div style={{ display:"flex", justifyContent:"flex-end", gap:9 }}>
+          <button className="bg">Discard</button>
+          <button className="bp">Save Settings</button>
+        </div>
+
       </div>
     </div>
   );
