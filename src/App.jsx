@@ -595,17 +595,24 @@ function MailView({ selectedThread, setSelectedThread }) {
       return !isSentLive && (m.status==="draft");
     });
 
+  const isOutboundCompleted = (th) =>
+    th.messages.some(m => {
+      if (m.direction !== "Outbound") return false;
+      const isSentLive = sentIds[m.id];
+      return isSentLive || m.status === "sent" || m.status === "approved";
+    });
+
   // Tab filtering
   const tabFilter = (th) => {
     if (tab==="Inbound")  return th.messages.some(m=>m.direction==="Inbound");
-    if (tab==="Outbound") return th.messages.some(m=>m.direction==="Outbound");
+    if (tab==="Outbound") return isOutboundCompleted(th);
     if (tab==="Review")   return isThreadDraft(th);
     return true;
   };
 
   const tabCounts = {
     Inbound:  THREADS.filter(t=>t.messages.some(m=>m.direction==="Inbound")).length,
-    Outbound: THREADS.filter(t=>t.messages.some(m=>m.direction==="Outbound")).length,
+    Outbound: THREADS.filter(t=>isOutboundCompleted(t)).length,
     Review:   THREADS.filter(t=>isThreadDraft(t)).length,
   };
 
@@ -767,6 +774,7 @@ function MailView({ selectedThread, setSelectedThread }) {
 /* ── Thread Detail ────────────────────────────────────── */
 function ThreadDetail({ thread, editingId, setEditingId, editBodies, setEditBodies, sentIds, onApproveAndSend }) {
   const [recordApproved, setRecordApproved] = useState(false);
+  const [recordFields, setRecordFields] = useState(thread.draftRecord?.fields || []);
   const needsRecordApproval = !!thread.draftRecord;
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100%" }}>
@@ -799,6 +807,8 @@ function ThreadDetail({ thread, editingId, setEditingId, editBodies, setEditBodi
               {showDraftRecord && (
                 <DraftRecordBlock
                   record={thread.draftRecord}
+                  fields={recordFields}
+                  setFields={setRecordFields}
                   sentIds={sentIds}
                   threadMsgs={thread.messages}
                   onApprove={()=>setRecordApproved(true)}
@@ -1313,9 +1323,8 @@ function PersonalizationView() {
 }
 
 /* ── Draft Record Block ───────────────────────────────── */
-function DraftRecordBlock({ record, sentIds, threadMsgs, onApprove, approved }) {
+function DraftRecordBlock({ record, fields, setFields, sentIds, threadMsgs, onApprove, approved, onFieldsSaved }) {
   const [editing, setEditing] = useState(false);
-  const [fields, setFields] = useState(record.fields);
   const col = CLS_COLORS[record.type] || { bg:"#374151", light:"#f3f4f6", text:"#374151" };
   const outboundMsg = threadMsgs.find(m => m.direction==="Outbound" && m.status==="draft");
   if (!outboundMsg || sentIds[outboundMsg.id]) return null;
@@ -1373,7 +1382,7 @@ function DraftRecordBlock({ record, sentIds, threadMsgs, onApprove, approved }) 
           {editing
             ? <>
                 <button className="bg" style={{ fontSize:11 }} onClick={()=>setEditing(false)}>✕ Cancel</button>
-                <button className="bt" style={{ fontSize:11 }} onClick={()=>setEditing(false)}>✓ Save Changes</button>
+                <button className="bt" style={{ fontSize:11 }} onClick={()=>{ setEditing(false); onFieldsSaved && onFieldsSaved(fields); }}>✓ Save Changes</button>
               </>
             : <button className="bg" style={{ fontSize:11 }} onClick={()=>setEditing(true)}>✏ Edit Record</button>
           }
