@@ -595,17 +595,24 @@ function MailView({ selectedThread, setSelectedThread }) {
       return !isSentLive && (m.status==="draft");
     });
 
+  const isOutboundCompleted = (th) =>
+    th.messages.some(m => {
+      if (m.direction !== "Outbound") return false;
+      const isSentLive = sentIds[m.id];
+      return isSentLive || m.status === "sent" || m.status === "approved";
+    });
+
   // Tab filtering
   const tabFilter = (th) => {
     if (tab==="Inbound")  return th.messages.some(m=>m.direction==="Inbound");
-    if (tab==="Outbound") return th.messages.some(m=>m.direction==="Outbound");
+    if (tab==="Outbound") return isOutboundCompleted(th);
     if (tab==="Review")   return isThreadDraft(th);
     return true;
   };
 
   const tabCounts = {
     Inbound:  THREADS.filter(t=>t.messages.some(m=>m.direction==="Inbound")).length,
-    Outbound: THREADS.filter(t=>t.messages.some(m=>m.direction==="Outbound")).length,
+    Outbound: THREADS.filter(t=>isOutboundCompleted(t)).length,
     Review:   THREADS.filter(t=>isThreadDraft(t)).length,
   };
 
