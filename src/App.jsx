@@ -153,10 +153,9 @@ const THREADS = [
 ];
 
 const STATS = [
-  { label:"Emails Today",   value:"47",  change:"+12%", up:true  },
-  { label:"Auto-Processed", value:"38",  change:"81%",  up:true  },
-  { label:"Pending Review", value:"9",   change:"-3",   up:false },
-  { label:"Workflows Run",  value:"124", change:"+8%",  up:true  },
+  { label:"Emails Today",    value:"47", change:"+12%", up:true  },
+  { label:"Pending Review",  value:"9",  change:"-3",   up:false },
+  { label:"Processed by AI", value:"38", change:"81%",  up:true  },
 ];
 const DATE_PRESETS = ["Today","Yesterday","Last 7 days","Last 30 days","Custom"];
 const FONTS = ["DM Sans","Georgia","Helvetica Neue","Trebuchet MS","Garamond","Courier New"];
@@ -277,7 +276,7 @@ function Dashboard() {
   return (
     <div>
       {/* Stats */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:13, marginBottom:18 }}>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:13, marginBottom:18 }}>
         {STATS.map(s=>(
           <div key={s.label} className="sc" style={{ background:"white", borderRadius:11, padding:"15px 17px", boxShadow:`0 2px 8px rgba(33,58,84,.07)`, borderTop:`3px solid ${s.up?C.tertiary:"#e5e7eb"}` }}>
             <div style={{ fontSize:11, color:C.muted, fontWeight:500, marginBottom:4 }}>{s.label}</div>
@@ -308,20 +307,8 @@ function Dashboard() {
 
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }}>
         <div style={{ background:"white", borderRadius:11, padding:17, boxShadow:`0 2px 8px rgba(33,58,84,.06)` }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:12 }}>
-            <h3 style={{ fontSize:13, fontWeight:700, color:C.primary }}>Recent Threads</h3>
-            <span style={{ fontSize:11.5, color:C.tertiary, fontWeight:600, cursor:"pointer" }}>View all →</span>
-          </div>
-          {THREADS.slice(0,6).map(t=>(
-            <div key={t.id} style={{ display:"flex", alignItems:"center", gap:9, padding:"7px 0", borderBottom:`1px solid ${C.border}` }}>
-              <ClassBadge c={t.classification}/>
-              <div style={{ flex:1, minWidth:0 }}>
-                <div style={{ fontSize:11.5, fontWeight:t.unread?600:400, color:C.primary, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{t.subject}</div>
-                <div style={{ fontSize:10, color:C.muted }}>{t.messages.length} msg{t.messages.length>1?"s":""}</div>
-              </div>
-              <span style={{ fontSize:10, color:C.muted, flexShrink:0 }}>{t.lastTime}</span>
-            </div>
-          ))}
+          <h3 style={{ fontSize:13, fontWeight:700, color:C.primary, marginBottom:13 }}>Email Activity</h3>
+          <TrendChart />
         </div>
 
         <div style={{ background:"white", borderRadius:11, padding:17, boxShadow:`0 2px 8px rgba(33,58,84,.06)` }}>
@@ -358,6 +345,118 @@ function Dashboard() {
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════
+   TREND CHART
+══════════════════════════════════════════════════════ */
+const CHART_DATA = [
+  { date:"Mar 14", emails:31, auto:24, pending:7  },
+  { date:"Mar 15", emails:38, auto:29, pending:9  },
+  { date:"Mar 16", emails:27, auto:21, pending:6  },
+  { date:"Mar 17", emails:42, auto:35, pending:7  },
+  { date:"Mar 18", emails:35, auto:28, pending:7  },
+  { date:"Mar 19", emails:29, auto:23, pending:6  },
+  { date:"Mar 20", emails:47, auto:38, pending:9  },
+];
+
+const CHART_LINES = [
+  { key:"emails",  label:"Emails Today",   color:"#0056B3" },
+  { key:"pending", label:"Pending Review", color:"#dc2626" },
+  { key:"auto",    label:"Processed by AI", color:"#16a34a" },
+];
+
+function TrendChart() {
+  const [active, setActive] = useState(CHART_LINES.map(l=>l.key));
+  const [tooltip, setTooltip] = useState(null);
+
+  const W = 420, H = 155, PL = 36, PR = 10, PT = 8, PB = 22;
+  const cW = W - PL - PR, cH = H - PT - PB;
+
+  const visibleLines = CHART_LINES.filter(l => active.includes(l.key));
+  const allVals = visibleLines.flatMap(l => CHART_DATA.map(d => d[l.key]));
+  const maxVal = allVals.length ? Math.max(...allVals) : 100;
+  const yMax = Math.ceil(maxVal / 20) * 20 || 20;
+
+  const xPos = i => PL + (i / (CHART_DATA.length - 1)) * cW;
+  const yPos = v => PT + cH - (v / yMax) * cH;
+
+  const toPath = key =>
+    CHART_DATA.map((d, i) => `${i === 0 ? "M" : "L"}${xPos(i).toFixed(1)},${yPos(d[key]).toFixed(1)}`).join(" ");
+
+  const yTicks = [0, 0.25, 0.5, 0.75, 1].map(r => Math.round(r * yMax));
+
+  const toggle = key => setActive(p => p.includes(key) ? p.filter(k => k !== key) : [...p, key]);
+
+  return (
+    <div>
+      {/* Legend */}
+      <div style={{ display:"flex", gap:12, flexWrap:"wrap", marginBottom:10 }}>
+        {CHART_LINES.map(l => (
+          <button key={l.key} onClick={() => toggle(l.key)}
+            style={{ display:"flex", alignItems:"center", gap:5, background:"none", border:"none", cursor:"pointer", padding:0, fontFamily:"inherit", opacity: active.includes(l.key) ? 1 : 0.35 }}>
+            <span style={{ width:20, height:3, background:l.color, borderRadius:2, display:"inline-block" }}></span>
+            <span style={{ fontSize:10.5, color:C.neutral, fontWeight:500 }}>{l.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* SVG chart */}
+      <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ overflow:"visible" }}
+        onMouseLeave={() => setTooltip(null)}>
+
+        {/* Y grid + labels */}
+        {yTicks.map(v => (
+          <g key={v}>
+            <line x1={PL} x2={PL + cW} y1={yPos(v)} y2={yPos(v)}
+              stroke="#E0E6ED" strokeWidth={v === 0 ? 1.5 : 1} strokeDasharray={v === 0 ? "none" : "3,3"} />
+            <text x={PL - 5} y={yPos(v) + 4} textAnchor="end" fontSize={9} fill={C.muted}>{v}</text>
+          </g>
+        ))}
+
+        {/* X labels */}
+        {CHART_DATA.map((d, i) => (
+          <text key={i} x={xPos(i)} y={H - 6} textAnchor="middle" fontSize={9} fill={C.muted}>{d.date}</text>
+        ))}
+
+        {/* Lines */}
+        {visibleLines.map(l => (
+          <path key={l.key} d={toPath(l.key)} fill="none" stroke={l.color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" />
+        ))}
+
+        {/* Dots + hover zones */}
+        {CHART_DATA.map((d, i) => (
+          <g key={i}>
+            <rect x={xPos(i) - 14} y={PT} width={28} height={cH} fill="transparent"
+              onMouseEnter={() => setTooltip({ i, x: xPos(i), d })} />
+            {visibleLines.map(l => (
+              <circle key={l.key} cx={xPos(i)} cy={yPos(d[l.key])} r={3}
+                fill="white" stroke={l.color} strokeWidth={2} />
+            ))}
+          </g>
+        ))}
+
+        {/* Tooltip */}
+        {tooltip && (() => {
+          const tx = tooltip.x + 8 + 110 > W ? tooltip.x - 118 : tooltip.x + 8;
+          return (
+            <g>
+              <line x1={tooltip.x} x2={tooltip.x} y1={PT} y2={PT + cH} stroke="#CBD5E1" strokeWidth={1} strokeDasharray="3,3" />
+              <rect x={tx} y={PT} width={110} height={visibleLines.length * 16 + 22} rx={5} fill="white"
+                stroke={C.border} strokeWidth={1} filter="drop-shadow(0 2px 4px rgba(0,0,0,.08))" />
+              <text x={tx + 8} y={PT + 13} fontSize={9.5} fontWeight="700" fill={C.primary}>{tooltip.d.date}</text>
+              {visibleLines.map((l, li) => (
+                <g key={l.key}>
+                  <rect x={tx + 8} y={PT + 20 + li * 16} width={8} height={3} rx={1} fill={l.color} />
+                  <text x={tx + 20} y={PT + 27 + li * 16} fontSize={9} fill={C.neutral}>{l.label}: <tspan fontWeight="700" fill={C.primary}>{tooltip.d[l.key]}</tspan></text>
+                </g>
+              ))}
+            </g>
+          );
+        })()}
+      </svg>
     </div>
   );
 }
