@@ -1,4 +1,5 @@
 import { useState } from "react";
+import React from "react";
 
 /* ─── Brand Colors ───────────────────────────────────── */
 const C = {
@@ -85,6 +86,24 @@ const THREADS = [
   {
     id: "T1", subject: "Urgent: AC Unit broken at Site B", classification: "Job",
     lastTime: "09:16 AM", lastDate: "2026-03-20", unread: true,
+    draftRecord: {
+      type: "Job", ref: "DRAFT",
+      fields: [
+        { label:"Customer",              value:"ACME Corp",          mandatory:true  },
+        { label:"Site",                  value:"Site B",               mandatory:true  },
+        { label:"Job Description",       value:"AC unit not operational. Daikin 36BTU installed 2019. Engineer required ASAP to diagnose and repair fault.", mandatory:true  },
+        { label:"Job Type",              value:"Reactive Maintenance",            mandatory:true  },
+        { label:"Job Owner",             value:"System User",          system:true     },
+        { label:"Date Logged",           value:"20 Mar 2026, 09:14 AM",          system:true     },
+        { label:"Customer Order Number", value:" ",                               optional:true   },
+        { label:"Priority",              value:"High",                            optional:true   },
+        { label:"Contact Info",          value:"john.smith@acmecorp.com",         optional:true   },
+        { label:"Attachments",           value:"None",                            optional:true   },
+        { label:"Job Category",          value:"HVAC",                            optional:true   },
+        { label:"Job Primary Trade",     value:"Air Conditioning",                optional:true   },
+        { label:"Reference Number",      value:" ",                           optional:true   },
+      ],
+    },
     messages: [
       { id:"T1-1", from:"john.smith@acmecorp.com",   to:"ops@yourfsm.com",            direction:"Inbound",  time:"09:14 AM", workflowId:1, status:"received", body:"Hi,\n\nOur AC unit at Site B has stopped working. We need an engineer ASAP. The unit is a Daikin 36BTU, installed in 2019. Customer ref: ACME-001.\n\nPlease advise on earliest availability.\n\nRegards,\nJohn Smith" },
       { id:"T1-2", from:"ops@yourfsm.com",           to:"john.smith@acmecorp.com",    direction:"Outbound", time:"09:16 AM", workflowId:8, status:"draft",    aiGenerated:true, body:"Dear John,\n\nThank you for contacting us. We have logged your request for the AC unit fault at Site B under job reference JOB-2026-0441.\n\nAn engineer has been provisionally scheduled and you will receive a confirmed visit time within the next 2 hours. Please ensure safe access to the unit is available in the meantime.\n\nKind regards,\nFSM Operations Team" },
@@ -93,6 +112,24 @@ const THREADS = [
   {
     id: "T2", subject: "Request for Quote – Plumbing Works", classification: "Quote",
     lastTime: "09:05 AM", lastDate: "2026-03-20", unread: true,
+    draftRecord: {
+      type: "Quote", ref: "DRAFT",
+      fields: [
+        { label:"Customer",             value:"BuildRight",                    mandatory:true },
+        { label:"Site",                 value:"New Development Site, BuildRight",                 mandatory:true },
+        { label:"Description",          value:"Plumbing works as per submitted specification sheet. Scope includes supply and installation across new development site.", mandatory:true },
+        { label:"Job Type",             value:"Quoted Works",                                     mandatory:true },
+        { label:"Quote Owner",          value:"System User",                           system:true   },
+        { label:"Date Logged",          value:"20 Mar 2026, 08:55 AM",                           system:true   },
+        { label:"Job Category",         value:"Plumbing",                                         optional:true },
+        { label:"Quote Reference",      value:"DRAFT",                                            optional:true },
+        { label:"Quote Trade",          value:"Plumbing & Drainage",                              optional:true },
+        { label:"Title",                value:"Plumbing Works — New Development Site Q2 2026",    optional:true },
+        { label:"Priority",             value:"Standard",                                         optional:true },
+        { label:"Contact Info",         value:"procurement@buildright.co.uk",                     optional:true },
+        { label:"Attachments",          value:"Specification sheet (referenced in email)",        optional:true },
+      ],
+    },
     messages: [
       { id:"T2-1", from:"procurement@buildright.co.uk", to:"ops@yourfsm.com",         direction:"Inbound",  time:"08:55 AM", workflowId:2, status:"received", body:"Hi,\n\nWe require a formal quote for plumbing works at our new development site. Please see the attached specification sheet. Our indicative budget is approx £15,000 and the timeline is Q2 2026.\n\nPlease confirm receipt.\n\nThanks,\nProcurement Team, BuildRight" },
       { id:"T2-2", from:"ops@yourfsm.com",             to:"procurement@buildright.co.uk", direction:"Outbound", time:"09:05 AM", workflowId:2, status:"draft", aiGenerated:true, body:"Dear Procurement Team,\n\nThank you for your quote request. We have reviewed your specification and are pleased to provide the following indicative quote for plumbing works at your new development:\n\n• Labour (est. 5 days @ £650/day): £3,250\n• Materials (as per spec): £9,100\n• Site mobilisation: £800\n• Contingency (10%): £1,315\n• Total (ex. VAT): £14,465\n\nThis is subject to a site survey, which we will arrange shortly. Quote reference: QT-2026-0182.\n\nKind regards,\nFSM Operations Team" },
@@ -169,10 +206,11 @@ export default function App() {
   const [selectedThread, setSelectedThread] = useState(null);
   const [collapsed,      setCollapsed]      = useState(false);
   const [wfStates,       setWfStates]       = useState(
-    WORKFLOWS.reduce((a,w) => ({ ...a, [w.id]:{ active:w.active, requireConfirm:w.requireConfirm } }), {})
+    WORKFLOWS.reduce((a,w) => ({ ...a, [w.id]:{ active:w.active, requireConfirm:w.requireConfirm, generalAck:false } }), {})
   );
   const toggleWf      = (id) => setWfStates(p => ({ ...p, [id]:{ ...p[id], active:!p[id].active } }));
   const toggleConfirm = (id) => setWfStates(p => ({ ...p, [id]:{ ...p[id], requireConfirm:!p[id].requireConfirm } }));
+  const toggleAck     = (id) => setWfStates(p => ({ ...p, [id]:{ ...p[id], generalAck:!p[id].generalAck } }));
 
   return (
     <div style={{ display:"flex", height:"100vh", fontFamily:"'DM Sans','Segoe UI',sans-serif", background:C.bg, overflow:"hidden" }}>
@@ -259,7 +297,7 @@ export default function App() {
         <div style={{ flex:1, overflowY:"auto", padding:20 }}>
           {activeNav==="dashboard"       && <Dashboard />}
           {activeNav==="mail"            && <MailView selectedThread={selectedThread} setSelectedThread={setSelectedThread} />}
-          {activeNav==="workflows"       && <WorkflowsView wfStates={wfStates} toggleWf={toggleWf} toggleConfirm={toggleConfirm} />}
+          {activeNav==="workflows"       && <WorkflowsView wfStates={wfStates} toggleWf={toggleWf} toggleConfirm={toggleConfirm} toggleAck={toggleAck} />}
           {activeNav==="personalization" && <PersonalizationView />}
         </div>
       </div>
@@ -728,6 +766,8 @@ function MailView({ selectedThread, setSelectedThread }) {
 
 /* ── Thread Detail ────────────────────────────────────── */
 function ThreadDetail({ thread, editingId, setEditingId, editBodies, setEditBodies, sentIds, onApproveAndSend }) {
+  const [recordApproved, setRecordApproved] = useState(false);
+  const needsRecordApproval = !!thread.draftRecord;
   return (
     <div style={{ display:"flex", flexDirection:"column", height:"100%" }}>
       {/* Header */}
@@ -744,16 +784,22 @@ function ThreadDetail({ thread, editingId, setEditingId, editBodies, setEditBodi
 
       {/* Messages */}
       <div style={{ flex:1, overflowY:"auto", padding:"16px 18px", display:"flex", flexDirection:"column", gap:16 }}>
-        {thread.messages.map(msg=>{
+        {thread.messages.map((msg, msgIdx)=>{
           const wf      = WORKFLOWS.find(w=>w.id===msg.workflowId);
           const isOut   = msg.direction==="Outbound";
           const isSent  = sentIds[msg.id] || msg.status==="sent" || msg.status==="approved";
           const isEdit  = editingId===msg.id;
           const body    = editBodies[msg.id] ?? msg.body;
+          // Insert draft record block between last inbound and first outbound draft
+          const showDraftRecord = thread.draftRecord && isOut && msg.status==="draft" && !sentIds[msg.id]
+            && msgIdx > 0 && thread.messages[msgIdx-1].direction==="Inbound";
 
           return (
-            <div key={msg.id} style={{ display:"flex", flexDirection:"column", alignItems:isOut?"flex-end":"flex-start" }}>
-              {/* Avatar + sender */}
+            <React.Fragment key={msg.id}>
+              {showDraftRecord && (
+                <DraftRecordBlock record={thread.draftRecord} sentIds={sentIds} threadMsgs={thread.messages} onApprove={()=>setRecordApproved(true)} approved={recordApproved} />
+              )}
+              <div style={{ display:"flex", flexDirection:"column", alignItems:isOut?"flex-end":"flex-start" }}>              {/* Avatar + sender */}
               <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:5, flexDirection:isOut?"row-reverse":"row" }}>
                 <div style={{ width:28, height:28, borderRadius:"50%", background:isOut?C.secondary:C.primary, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:700, color:isOut?C.onYellow:"white", flexShrink:0 }}>
                   {isOut?"AI":msg.from.charAt(0).toUpperCase()}
@@ -774,7 +820,7 @@ function ThreadDetail({ thread, editingId, setEditingId, editBodies, setEditBodi
                   ? <textarea value={body} onChange={e=>setEditBodies(p=>({...p,[msg.id]:e.target.value}))}
                       style={{ width:"100%", minHeight:160, border:`1.5px solid ${C.tertiary}`, borderRadius:10, padding:"13px 15px", fontSize:13, lineHeight:1.75, color:C.neutral, resize:"vertical", outline:"none", fontFamily:"inherit", background:"#EEF6FF" }}/>
                   : <div className="mb" style={{ background:isOut?(isSent?"#f0fdf4":"#FFFBEB"):C.bg, border:`1px solid ${isOut?(isSent?"#bbf7d0":"#fde68a"):C.border}` }}>
-                      {body}
+                      <LinkifiedBody text={body} isDraft={!isSent && msg.status==="draft"} />
                     </div>
                 }
 
@@ -791,18 +837,31 @@ function ThreadDetail({ thread, editingId, setEditingId, editBodies, setEditBodi
 
                 {/* Actions — outbound drafts only */}
                 {isOut&&!isSent&&(
-                  <div style={{ marginTop:8, display:"flex", gap:7, justifyContent:"flex-end" }}>
-                    {isEdit
-                      ? <button className="bg" onClick={()=>setEditingId(null)}>✕ Cancel</button>
-                      : <button className="bg" onClick={()=>setEditingId(msg.id)}>✏ Edit Draft</button>
-                    }
-                    <button className="bp" onClick={()=>onApproveAndSend(msg.id)}>
-                      ✓ Approve &amp; Send
-                    </button>
+                  <div style={{ marginTop:8, display:"flex", flexDirection:"column", gap:6, alignItems:"flex-end" }}>
+                    {needsRecordApproval && !recordApproved && (
+                      <div style={{ display:"flex", alignItems:"center", gap:6, background:"#FFF8E1", border:"1px solid #fde68a", borderRadius:7, padding:"6px 11px", fontSize:11, color:"#92400e", fontWeight:500 }}>
+                        <span>⚠</span>
+                        <span>You must approve the draft {thread.draftRecord.type} record above before sending this email.</span>
+                      </div>
+                    )}
+                    <div style={{ display:"flex", gap:7 }}>
+                      {isEdit
+                        ? <button className="bg" onClick={()=>setEditingId(null)}>✕ Cancel</button>
+                        : <button className="bg" onClick={()=>setEditingId(msg.id)}>✏ Edit Draft</button>
+                      }
+                      <button
+                        className="bp"
+                        onClick={()=>{ if(!needsRecordApproval || recordApproved) onApproveAndSend(msg.id); }}
+                        title={needsRecordApproval && !recordApproved ? `Approve the ${thread.draftRecord.type} record first` : ""}
+                        style={{ opacity: needsRecordApproval && !recordApproved ? 0.4 : 1, cursor: needsRecordApproval && !recordApproved ? "not-allowed" : "pointer" }}>
+                        ✓ Approve &amp; Send
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
             </div>
+            </React.Fragment>
           );
         })}
 
@@ -832,7 +891,7 @@ function ThreadDetail({ thread, editingId, setEditingId, editBodies, setEditBodi
 /* ══════════════════════════════════════════════════════
    WORKFLOWS
 ══════════════════════════════════════════════════════ */
-function WorkflowsView({ wfStates, toggleWf, toggleConfirm }) {
+function WorkflowsView({ wfStates, toggleWf, toggleConfirm, toggleAck }) {
   const [filtersOpen,setFiltersOpen]=useState(false);
   const [fName,setFName]=useState("");
   const [fTrig,setFTrig]=useState("");
@@ -896,14 +955,19 @@ function WorkflowsView({ wfStates, toggleWf, toggleConfirm }) {
         {filtered.map(wf=>{
           const st=wfStates[wf.id];
           return (
-            <div key={wf.id} style={{ background:"white", borderRadius:11, padding:"16px 20px", boxShadow:`0 2px 8px rgba(33,58,84,.06)`, borderLeft:`4px solid ${st.active?CLS_COLORS[wf.trigger]?.bg||C.primary:C.border}` }}>
-              <div style={{ display:"flex", alignItems:"flex-start", gap:14 }}>
+            <div key={wf.id} style={{ background:"white", borderRadius:11, boxShadow:`0 2px 8px rgba(33,58,84,.06)`, borderLeft:`4px solid ${st.active?CLS_COLORS[wf.trigger]?.bg||C.primary:C.border}`, overflow:"hidden" }}>
+              <div style={{ padding:"16px 20px", display:"flex", alignItems:"flex-start", gap:14 }}>
                 {/* Left: info */}
                 <div style={{ flex:1 }}>
                   <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:6 }}>
                     <span style={{ fontSize:14, fontWeight:700, color:C.primary }}>{wf.name}</span>
                     <ClassBadge c={wf.trigger}/>
                     <DirBadge d={wf.direction} small/>
+                    {/* Gear icon */}
+                    <button title="Configure workflow"
+                      style={{ marginLeft:"auto", background:C.bg, border:`1.5px solid ${C.border}`, borderRadius:7, width:32, height:32, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:C.primary, fontSize:16, transition:"all .18s", flexShrink:0 }}>
+                      ⚙
+                    </button>
                   </div>
                   <p style={{ fontSize:12.5, color:"#555E6A", lineHeight:1.65, marginBottom:10 }}>{wf.description}</p>
                   <div style={{ display:"flex", gap:14, fontSize:11, color:C.muted }}>
@@ -914,7 +978,6 @@ function WorkflowsView({ wfStates, toggleWf, toggleConfirm }) {
 
                 {/* Right: toggles */}
                 <div style={{ display:"flex", flexDirection:"column", gap:9, flexShrink:0, minWidth:190 }}>
-                  {/* Enable/Disable */}
                   <div style={{ display:"flex", alignItems:"center", gap:8, background:C.bg, border:`1px solid ${C.border}`, borderRadius:8, padding:"8px 12px" }}>
                     <div style={{ flex:1 }}>
                       <div style={{ fontSize:11, fontWeight:600, color:C.neutral }}>Workflow</div>
@@ -923,14 +986,19 @@ function WorkflowsView({ wfStates, toggleWf, toggleConfirm }) {
                     <span style={{ fontSize:11, color:st.active?"#16a34a":C.muted, fontWeight:600 }}>{st.active?"On":"Off"}</span>
                     <label className="ts"><input type="checkbox" checked={st.active} onChange={()=>toggleWf(wf.id)}/><span className="sl"></span></label>
                   </div>
-
-                  {/* Human in the loop */}
                   <div style={{ display:"flex", alignItems:"center", gap:8, background:st.requireConfirm?"#FFF8E1":C.bg, border:`1px solid ${st.requireConfirm?"#fde68a":C.border}`, borderRadius:8, padding:"8px 12px" }}>
                     <div style={{ flex:1 }}>
                       <div style={{ fontSize:11, fontWeight:600, color:C.neutral }}>Human in the Loop</div>
                       <div style={{ fontSize:10, color:C.muted }}>{st.requireConfirm?"Confirm before send":"Fully automated"}</div>
                     </div>
                     <label className="ts"><input type="checkbox" checked={st.requireConfirm} onChange={()=>toggleConfirm(wf.id)}/><span className="sl"></span></label>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, background:st.generalAck?"#f0fdf4":C.bg, border:`1px solid ${st.generalAck?"#bbf7d0":C.border}`, borderRadius:8, padding:"8px 12px" }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:11, fontWeight:600, color:C.neutral }}>General Acknowledgment</div>
+                      <div style={{ fontSize:10, color:C.muted }}>{st.generalAck?"Auto-acknowledge receipt":"No auto-acknowledgment"}</div>
+                    </div>
+                    <label className="ts"><input type="checkbox" checked={st.generalAck} onChange={()=>toggleAck(wf.id)}/><span className="sl"></span></label>
                   </div>
                 </div>
               </div>
@@ -1083,7 +1151,101 @@ function PersonalizationView() {
   );
 }
 
+/* ── Draft Record Block ───────────────────────────────── */
+function DraftRecordBlock({ record, sentIds, threadMsgs, onApprove, approved }) {
+  const [editing, setEditing] = useState(false);
+  const [fields, setFields] = useState(record.fields);
+  const col = CLS_COLORS[record.type] || { bg:"#374151", light:"#f3f4f6", text:"#374151" };
+  const outboundMsg = threadMsgs.find(m => m.direction==="Outbound" && m.status==="draft");
+  if (!outboundMsg || sentIds[outboundMsg.id]) return null;
+
+  const updateField = (i, val) => setFields(p => p.map((f,idx) => idx===i ? {...f, value:val} : f));
+
+  const badge = (f) => {
+    if (f.mandatory) return <span style={{ color:"#dc2626", fontSize:9, fontWeight:700, marginLeft:2 }}>*</span>;
+    if (f.system)    return <span style={{ background:"#EEF2F6", color:C.muted, fontSize:8.5, fontWeight:700, padding:"0 5px", borderRadius:4, marginLeft:4 }}>AUTO</span>;
+    return <span style={{ background:"#f3f4f6", color:"#9ca3af", fontSize:8.5, fontWeight:600, padding:"0 5px", borderRadius:4, marginLeft:4 }}>OPT</span>;
+  };
+
+  return (
+    <div style={{ border:`2px solid ${col.bg}`, borderRadius:11, margin:"4px 0" }}>
+      {/* Header */}
+      <div style={{ background:col.bg, padding:"10px 16px", display:"flex", alignItems:"center", gap:8, borderRadius:"9px 9px 0 0" }}>
+        <span style={{ color:"white", fontSize:11.5, fontWeight:700 }}>✦ AI Generated Draft {record.type}</span>
+        <span style={{ background:"rgba(255,255,255,.2)", color:"white", fontSize:10, fontWeight:700, padding:"2px 9px", borderRadius:10 }}>⏳ Pending Human Approval</span>
+        <span style={{ marginLeft:"auto", color:"rgba(255,255,255,.65)", fontSize:10 }}>Ref: {record.ref}</span>
+      </div>
+
+      {/* Legend */}
+      <div style={{ background:col.bg, borderTop:"1px solid rgba(255,255,255,.15)", padding:"5px 16px", display:"flex", gap:14 }}>
+        <span style={{ fontSize:9.5, color:"rgba(255,255,255,.8)" }}><span style={{ color:"#fca5a5", fontWeight:700 }}>*</span> Mandatory</span>
+        <span style={{ fontSize:9.5, color:"rgba(255,255,255,.8)" }}><span style={{ background:"rgba(255,255,255,.2)", padding:"0 4px", borderRadius:3, fontSize:8.5, fontWeight:700 }}>AUTO</span> System-generated</span>
+        <span style={{ fontSize:9.5, color:"rgba(255,255,255,.8)" }}><span style={{ background:"rgba(255,255,255,.15)", padding:"0 4px", borderRadius:3, fontSize:8.5, fontWeight:600 }}>OPT</span> Optional</span>
+      </div>
+
+      {/* Fields */}
+      <div style={{ background:"white", padding:"14px 16px", borderRadius:"0 0 9px 9px" }}>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"10px 20px" }}>
+          {fields.map((f, i) => (
+            <div key={i} style={{ display:"flex", flexDirection:"column", gap:3 }}>
+              <div style={{ display:"flex", alignItems:"center" }}>
+                <span style={{ fontSize:10, fontWeight:700, color:C.muted, textTransform:"uppercase", letterSpacing:.4 }}>{f.label}</span>
+                {badge(f)}
+              </div>
+              {editing && !f.system
+                ? <input value={f.value} onChange={e=>updateField(i, e.target.value)}
+                    style={{ fontSize:12, color:C.neutral, background:"white", border:`1.5px solid ${col.bg}`, borderRadius:6, padding:"5px 9px", outline:"none", fontFamily:"inherit" }}/>
+                : <span style={{ fontSize:12.5, color: f.system ? C.muted : C.neutral, fontWeight: f.mandatory ? 600 : 400,
+                    background: f.system ? C.bg : "transparent",
+                    padding: f.system ? "3px 8px" : "0",
+                    borderRadius: f.system ? 5 : 0,
+                    fontStyle: f.value==="—" ? "italic" : "normal" }}>
+                    {f.value}
+                  </span>
+              }
+            </div>
+          ))}
+        </div>
+
+        {/* Actions */}
+        <div style={{ display:"flex", gap:7, marginTop:14, paddingTop:12, borderTop:`1px solid ${C.border}`, alignItems:"center" }}>
+          {editing
+            ? <>
+                <button className="bg" style={{ fontSize:11 }} onClick={()=>setEditing(false)}>✕ Cancel</button>
+                <button className="bt" style={{ fontSize:11 }} onClick={()=>setEditing(false)}>✓ Save Changes</button>
+              </>
+            : <button className="bg" style={{ fontSize:11 }} onClick={()=>setEditing(true)}>✏ Edit Record</button>
+          }
+          <span style={{ fontSize:10.5, color:C.muted, marginLeft:"auto" }}>Review all fields before approving</span>
+          {approved
+            ? <span style={{ background:"#d1fae5", color:"#065f46", fontSize:11, fontWeight:700, padding:"6px 14px", borderRadius:6 }}>✓ {record.type} Approved</span>
+            : <button className="bp" style={{ fontSize:11 }} onClick={onApprove}>✓ Approve {record.type}</button>
+          }
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Micro-components ─────────────────────────────────── */
+function LinkifiedBody({ text, isDraft }) {
+  // Match common FSM reference patterns: JOB-, QT-, INV-, PPM-, PO-
+  const parts = text.split(/((?:JOB|QT|INV|PPM|PO)-[\w-]+)/g);
+  return (
+    <>
+      {parts.map((part, i) =>
+        /^(JOB|QT|INV|PPM|PO)-/.test(part)
+          ? <a key={i} href="#" onClick={e=>e.preventDefault()}
+              style={{ color:C.tertiary, fontWeight:700, textDecoration:"none", borderBottom:`1.5px solid ${C.tertiary}`, paddingBottom:1 }}
+              onMouseEnter={e=>e.target.style.color="#004999"}
+              onMouseLeave={e=>e.target.style.color=C.tertiary}>
+              {isDraft ? <b>DRAFT</b> : part}
+            </a>
+          : part
+      )}
+    </>
+  );
+}
 function ClassBadge({ c }) {
   const col = CLS_COLORS[c]||{ light:"#f3f4f6", text:"#374151" };
   return <span style={{ background:col.light, color:col.text, fontSize:9.5, fontWeight:700, padding:"1px 7px", borderRadius:7 }}>{c}</span>;
