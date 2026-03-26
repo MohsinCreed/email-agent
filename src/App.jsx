@@ -781,12 +781,13 @@ function WorkflowsView({ wfStates, toggleWf, toggleConfirm }) {
    PERSONALIZATION
 ══════════════════════════════════════════════════════ */
 function PersonalizationView() {
-  const [tone,      setTone]      = useState("professional");
-  const [signature, setSignature] = useState("Best regards,\nFSM Email AI Agent");
-  const [font,      setFont]      = useState("DM Sans");
-  const [fs,        setFs]        = useState("14");
-  const [lh,         setLh]         = useState("1.6");
-  const [ew,         setEw]         = useState("640");
+  const [tone,           setTone]           = useState("professional");
+  const [signature,      setSignature]      = useState("Best regards,\nFSM Email AI Agent");
+  const [customTemplate, setCustomTemplate] = useState("Dear {{name}},\n\nThank you for your email.\n\n{{body}}\n\nKind regards,\n{{sender}}\n");
+  const [font,           setFont]           = useState("DM Sans");
+  const [fs,             setFs]             = useState("14");
+  const [lh,             setLh]             = useState("1.6");
+  const [ew,             setEw]             = useState("640");
 
   const previewStyle = {
     fontFamily: font, fontSize:`${fs}px`, lineHeight:lh, color:C.neutral,
@@ -851,6 +852,16 @@ function PersonalizationView() {
             </div>
             {/* (AI Behaviour toggles removed per request) */}
             {/* Empty block retained by design */}
+          </div>
+
+          {/* Custom Email Template */}
+          <div style={{ background:"white", borderRadius:11, padding:19, boxShadow:`0 2px 8px rgba(33,58,84,.06)` }}>
+            <h3 style={{ fontSize:13, fontWeight:700, color:C.primary, marginBottom:13 }}>Custom Email Template</h3>
+            <textarea value={customTemplate} onChange={e=>setCustomTemplate(e.target.value)} rows={8}
+              style={{ width:"100%", border:`1px solid ${C.border}`, borderRadius:8, padding:"9px 11px", fontSize:12, color:C.neutral, resize:"vertical", outline:"none", fontFamily:"inherit" }}/>
+            <div style={{ marginTop:8, fontSize:11, color:C.muted }}>
+              Use placeholders: <code>{'{{name}}'}</code>, <code>{'{{body}}'}</code>, <code>{'{{sender}}'}</code>
+            </div>
           </div>
 
           {/* Signature */}
