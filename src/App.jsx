@@ -797,7 +797,61 @@ function ThreadDetail({ thread, editingId, setEditingId, editBodies, setEditBodi
           return (
             <React.Fragment key={msg.id}>
               {showDraftRecord && (
-                <DraftRecordBlock record={thread.draftRecord} sentIds={sentIds} threadMsgs={thread.messages} onApprove={()=>setRecordApproved(true)} approved={recordApproved} />
+                <DraftRecordBlock
+                  record={thread.draftRecord}
+                  sentIds={sentIds}
+                  threadMsgs={thread.messages}
+                  onApprove={()=>setRecordApproved(true)}
+                  approved={recordApproved}
+                  onFieldsSaved={(updatedFields) => {
+                    const outMsg = thread.messages.find(m => m.direction==="Outbound" && m.status==="draft");
+                    if (!outMsg) return;
+                    const g = (label) => updatedFields.find(f => f.label===label)?.value || "—";
+                    const customerName = g("Customer").split("—")[0].trim();
+                    const firstName = customerName.split(" ")[0];
+                    let newBody = "";
+                    if (thread.draftRecord.type === "Job") {
+                      newBody =
+`Dear ${firstName},
+
+Thank you for contacting us. We have logged your request under job reference DRAFT.
+
+Customer: ${g("Customer")}
+Site: ${g("Site")}
+Job Type: ${g("Job Type")}
+Description: ${g("Job Description")}
+Priority: ${g("Priority")}
+Category: ${g("Job Category")}
+Trade: ${g("Job Primary Trade")}
+
+An engineer will be assigned and you will receive a confirmed visit time shortly. Please ensure safe access to the site is available.
+
+Kind regards,
+FSM Operations Team`;
+                    } else if (thread.draftRecord.type === "Quote") {
+                      newBody =
+`Dear ${firstName},
+
+Thank you for your quote request. We have reviewed your requirements and prepared the following draft quote.
+
+Customer: ${g("Customer")}
+Site: ${g("Site")}
+Title: ${g("Title")}
+Description: ${g("Description")}
+Job Type: ${g("Job Type")}
+Trade: ${g("Quote Trade")}
+Category: ${g("Job Category")}
+Priority: ${g("Priority")}
+Quote Reference: DRAFT
+
+This quote is subject to a site survey, which we will arrange shortly.
+
+Kind regards,
+FSM Operations Team`;
+                    }
+                    if (newBody) setEditBodies(p => ({ ...p, [outMsg.id]: newBody }));
+                  }}
+                />
               )}
               <div style={{ display:"flex", flexDirection:"column", alignItems:isOut?"flex-end":"flex-start" }}>              {/* Avatar + sender */}
               <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:5, flexDirection:isOut?"row-reverse":"row" }}>
@@ -1013,6 +1067,32 @@ function WorkflowsView({ wfStates, toggleWf, toggleConfirm, toggleAck }) {
 /* ══════════════════════════════════════════════════════
    PERSONALIZATION
 ══════════════════════════════════════════════════════ */
+const DEFAULT_ACK_TEMPLATES = WORKFLOWS.reduce((acc, wf) => {
+  const triggerLine = {
+    Job:         "We have received your job request and our team is reviewing the details.",
+    Quote:       "We have received your quote request and will prepare a detailed proposal shortly.",
+    PPM:         "We have received your planned maintenance schedule and are loading it into our system.",
+    Invoice:     "We have received your invoice query and our accounts team will review it promptly.",
+    Combination: "We have received your message and are handling each request separately.",
+    Other:       "We have received your email and a member of our team will review it shortly.",
+  };
+  acc[wf.id] =
+`Dear {{customer_name}},
+
+Thank you for contacting us regarding your {{workflow_name}} request.
+
+${triggerLine[wf.trigger] || "We have received your message and will be in touch shortly."}
+
+Reference: {{reference_number}}
+Received: {{received_date}}
+
+We will be in touch shortly.
+
+Kind regards,
+FSM Operations Team`;
+  return acc;
+}, {});
+
 function PersonalizationView() {
   const [tone,           setTone]           = useState("professional");
   const [signature,      setSignature]      = useState("Best regards,\nFSM Email AI Agent");
@@ -1021,6 +1101,17 @@ function PersonalizationView() {
   const [fs,             setFs]             = useState("14");
   const [lh,             setLh]             = useState("1.6");
   const [ew,             setEw]             = useState("640");
+  const [ackTemplates,   setAckTemplates]   = useState(DEFAULT_ACK_TEMPLATES);
+  const [ackWfId,        setAckWfId]        = useState(WORKFLOWS[0].id);
+  const [ackSaved,       setAckSaved]       = useState({});
+
+  const selectedWf = WORKFLOWS.find(w => w.id === ackWfId);
+  const ackBody    = ackTemplates[ackWfId] ?? "";
+
+  const handleAckSave = () => {
+    setAckSaved(p => ({ ...p, [ackWfId]: true }));
+    setTimeout(() => setAckSaved(p => ({ ...p, [ackWfId]: false })), 2000);
+  };
 
   const previewStyle = {
     fontFamily: font, fontSize:`${fs}px`, lineHeight:lh, color:C.neutral,
@@ -1094,6 +1185,68 @@ function PersonalizationView() {
               style={{ width:"100%", border:`1px solid ${C.border}`, borderRadius:8, padding:"9px 11px", fontSize:12, color:C.neutral, resize:"vertical", outline:"none", fontFamily:"inherit" }}/>
             <div style={{ marginTop:8, fontSize:11, color:C.muted }}>
               Use placeholders: <code>{'{{name}}'}</code>, <code>{'{{body}}'}</code>, <code>{'{{sender}}'}</code>
+            </div>
+          </div>
+
+          {/* Acknowledgement Templates */}
+          <div style={{ background:"white", borderRadius:11, padding:19, boxShadow:`0 2px 8px rgba(33,58,84,.06)` }}>
+            <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+              <h3 style={{ fontSize:13, fontWeight:700, color:C.primary }}>Acknowledgement Templates</h3>
+              <span style={{ background:"#ede9fe", color:"#6d28d9", fontSize:9.5, fontWeight:700, padding:"2px 8px", borderRadius:10 }}>Per Workflow</span>
+            </div>
+            <p style={{ fontSize:11, color:C.muted, marginBottom:13 }}>
+              Customise the auto-acknowledgement message sent to customers when each workflow is triggered.
+            </p>
+
+            {/* Workflow selector */}
+            <div style={{ marginBottom:11 }}>
+              <label style={{ fontSize:11, fontWeight:700, color:C.muted, display:"block", marginBottom:5, textTransform:"uppercase" }}>Workflow</label>
+              <select value={ackWfId} onChange={e=>setAckWfId(Number(e.target.value))} className="fs">
+                {WORKFLOWS.map(wf=>(
+                  <option key={wf.id} value={wf.id}>{wf.name} — {wf.trigger} ({wf.direction})</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Context strip */}
+            {selectedWf && (
+              <div style={{ display:"flex", gap:6, alignItems:"center", marginBottom:11, background:C.bg, borderRadius:8, padding:"8px 11px", border:`1px solid ${C.border}` }}>
+                <ClassBadge c={selectedWf.trigger}/>
+                <DirBadge d={selectedWf.direction} small/>
+                <span style={{ fontSize:11, color:C.muted, marginLeft:2 }}>{selectedWf.description.slice(0,80)}…</span>
+              </div>
+            )}
+
+            {/* Template editor */}
+            <textarea
+              value={ackBody}
+              onChange={e => setAckTemplates(p => ({ ...p, [ackWfId]: e.target.value }))}
+              rows={9}
+              style={{ width:"100%", border:`1px solid ${C.border}`, borderRadius:8, padding:"9px 11px", fontSize:12, color:C.neutral, resize:"vertical", outline:"none", fontFamily:"inherit" }}
+            />
+
+            {/* Placeholders */}
+            <div style={{ marginTop:7, marginBottom:11, fontSize:11, color:C.muted, lineHeight:1.7 }}>
+              Dynamic placeholders:{" "}
+              {[
+                ["{{customer_name}}","Customer's name"],
+                ["{{workflow_name}}","Triggered workflow"],
+                ["{{reference_number}}","Auto-generated ref"],
+                ["{{received_date}}","Date email received"],
+              ].map(([ph, tip]) => (
+                <span key={ph} title={tip} style={{ display:"inline-block", background:"#f3f4f6", color:C.tertiary, fontFamily:"monospace", fontSize:10.5, padding:"1px 6px", borderRadius:4, marginRight:5, cursor:"default", border:`1px solid ${C.border}` }}>
+                  {ph}
+                </span>
+              ))}
+            </div>
+
+            <div style={{ display:"flex", justifyContent:"flex-end", gap:8 }}>
+              <button className="bg" onClick={() => setAckTemplates(p => ({ ...p, [ackWfId]: DEFAULT_ACK_TEMPLATES[ackWfId] }))}>
+                ↺ Reset
+              </button>
+              <button className="bt" onClick={handleAckSave}>
+                {ackSaved[ackWfId] ? "✓ Saved" : "Save Template"}
+              </button>
             </div>
           </div>
 
