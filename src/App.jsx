@@ -781,11 +781,10 @@ function WorkflowsView({ wfStates, toggleWf, toggleConfirm }) {
    PERSONALIZATION
 ══════════════════════════════════════════════════════ */
 function PersonalizationView() {
-  const [tone,       setTone]       = useState("professional");
-  const [autoApp,    setAutoApp]    = useState(false);
-  const [signature,  setSignature]  = useState("Best regards,\nFSM Email AI Agent");
-  const [font,       setFont]       = useState("DM Sans");
-  const [fs,         setFs]         = useState("14");
+  const [tone,      setTone]      = useState("professional");
+  const [signature, setSignature] = useState("Best regards,\nFSM Email AI Agent");
+  const [font,      setFont]      = useState("DM Sans");
+  const [fs,        setFs]        = useState("14");
   const [lh,         setLh]         = useState("1.6");
   const [ew,         setEw]         = useState("640");
 
@@ -850,18 +849,8 @@ function PersonalizationView() {
                 ))}
               </div>
             </div>
-            {[
-              ["Auto-Approve Low-Risk Actions","Approve actions with AI confidence >95%",autoApp,()=>setAutoApp(!autoApp)],
-              ["Human-in-the-Loop (Global)","All drafts require manual approval before sending",true,()=>{}],
-            ].map(([lbl,desc,val,fn])=>(
-              <div key={lbl} style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"10px 0", borderTop:`1px solid ${C.border}` }}>
-                <div>
-                  <div style={{ fontSize:12, fontWeight:600, color:C.neutral }}>{lbl}</div>
-                  <div style={{ fontSize:11, color:C.muted }}>{desc}</div>
-                </div>
-                <label className="ts"><input type="checkbox" checked={val} onChange={fn}/><span className="sl"></span></label>
-              </div>
-            ))}
+            {/* (AI Behaviour toggles removed per request) */}
+            {/* Empty block retained by design */}
           </div>
 
           {/* Signature */}
